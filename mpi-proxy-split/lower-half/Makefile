@@ -15,6 +15,11 @@ ifndef PLUGIN_ROOT
   PLUGIN_ROOT=..
 endif
 
+ifndef LFI_PATH
+    $(error LFI_PATH is not defined. Please set the environment variable.)
+endif
+
+LFI_INCLUDE=${LFI_PATH}/include
 DMTCP_INCLUDE=${DMTCP_ROOT}/include
 JALIB_INCLUDE=${DMTCP_ROOT}/jalib
 MANA_INCLUDE=${MANA_ROOT}/mpi-proxy-split
@@ -25,9 +30,9 @@ DMTCP_DEPS = ${DMTCP_ROOT}/src/libdmtcprestart.a \
 	     ${DMTCP_ROOT}/src/libjalib.a \
 	     ${DMTCP_ROOT}/src/libnohijack.a
 
-override CFLAGS += -fPIC -I${DMTCP_INCLUDE} -I${MANA_INCLUDE} -g3 -O0 \
+override CFLAGS += -fPIC -I${LFI_INCLUDE} -I${DMTCP_INCLUDE} -I${MANA_INCLUDE} -g3 -O0 \
                    -I${DMTCP_ROOT}/src 
-override CXXFLAGS += -fPIC -I${DMTCP_INCLUDE} -I${JALIB_INCLUDE} -I${MANA_INCLUDE} -I${DMTCP_ROOT}/src/mtcp \
+override CXXFLAGS += -fPIC -I${LFI_INCLUDE} -I${DMTCP_INCLUDE} -I${JALIB_INCLUDE} -I${MANA_INCLUDE} -I${DMTCP_ROOT}/src/mtcp \
                      -I${DMTCP_ROOT}/src
 
 TEXTSEG_ADDR_FLAG=-Wl,-Ttext-segment=0x10000000
@@ -44,7 +49,7 @@ default: lower-half
 # However, for come MPICXX it's hard to know if they cover it.
 # So this is good as a safety measure.
 lower-half: get-symbol-offset.o copy-stack.o patch-trampoline.o lh-func-ptr.o mem-wrapper.o switch-context.o lower-half.o mmap-fixed-noreplace.o ${DMTCP_DEPS}
-	${MPICXX} -g3 ${TEXTSEG_ADDR_FLAG} ${CXXFLAGS} -o $@ $^ -lpthread -ldl -latomic
+	${MPICXX} -g3 ${TEXTSEG_ADDR_FLAG} ${CXXFLAGS} -o $@ $^ -lpthread -ldl -latomic -L${LFI_PATH}/lib -llfi
 
 install: lower-half
 	cp -f $^ ${MANA_ROOT}/bin/

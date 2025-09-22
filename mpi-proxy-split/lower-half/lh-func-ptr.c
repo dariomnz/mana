@@ -1,10 +1,14 @@
 #include <mpi.h>
+#include <lfi.h>
+#include <lfi_async.h>
+#include <lfi_coll.h>
 #include <stddef.h>
 #include "lower-half-api.h"
 
 static void* MPI_Fnc_Ptrs[] = {
   NULL,
   FOREACH_FNC(GENERATE_FNC_PTR)
+  FOREACH_LFI_FNC(GENERATE_LFI_FNC_PTR)
   NULL,
 };
 

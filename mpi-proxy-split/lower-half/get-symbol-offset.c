@@ -95,10 +95,14 @@ off_t get_symbol_offset(const char *pathname, const char *symbol) {
       //       /usr/lib/debug/lib64/libc-2.28.so-2.28-236.el8_9.7.x86-64.debug 
       //       Package glibc-debuginfo-*.rpm exists: provides libc-*.debug
       if (access("/lib/debug/.build-id", F_OK) == 0) { // If Debian/Ubuntu
+        // TODO: need change to make it work in C3
+        #if 0
         // Debian variants use separate debug symbol file: /lib/debug/.build-id
         // The file below is the older hierarchy.  Now it uses .build-id.
         snprintf(debugLibName, sizeof debugLibName, "%s/%s",
                  "/usr/lib/debug/lib/x86_64-linux-gnu", debugName);
+        // fprintf(stderr, "pathname %s debugLibName %s debugName %s \n", pathname, debugLibName, debugName);
+        // fprintf(stderr, "debugLibName %s debugName %s shsectData[sect_hdr.sh_name] %.15s\n", debugLibName, debugName, &shsectData[sect_hdr.sh_name]);
         if (! expandDebugFile(debugLibName,
                               "/lib/debug/.build-id", debugName)) {
           fprintf(stderr,
@@ -112,6 +116,7 @@ off_t get_symbol_offset(const char *pathname, const char *symbol) {
         fd = open(debugLibName, O_RDONLY);
         assert(fd != -1);
         return get_symbol_offset(debugLibName, symbol);
+        #endif  
       }
       free(debugName);
       foundDebugLib = 1;
@@ -182,6 +187,7 @@ static int expandDebugFile(char *debugLibName,
       }
       // list_files_recursively(entry->d_name);
     } else {
+      // fprintf(stderr, "strcmp '%s' '%s'\n", entry->d_name, debugName);
       if (strcmp(entry->d_name, debugName) == 0) {
         snprintf(debugLibName, PATH_MAX, "%s/%s", dir, entry->d_name);
         return 1; // found a match

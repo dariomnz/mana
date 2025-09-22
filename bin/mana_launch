@@ -21,6 +21,7 @@ shadow = False
 mana_root_path = os.path.dirname(os.path.realpath(__file__)) + "/../"
 tmp_lib_path = mana_root_path + "lib"
 ckptdir_path = './'
+plugins = ""
 
 # if no arguments provided, print the help message
 if not sys.argv:
@@ -60,6 +61,12 @@ if "--help" in dmtcp_flags:
 if "--verbose" in dmtcp_flags:
   verbose = True
   dmtcp_flags.remove("--verbose")
+if "--with-plugin" in dmtcp_flags:
+  plugin_index = dmtcp_flags.index("--with-plugin")
+  # plugins = ":"
+  plugins += dmtcp_flags[plugin_index + 1]
+  dmtcp_flags.pop(plugin_index)
+  dmtcp_flags.pop(plugin_index)
 if "--timing" in dmtcp_flags:
   os.environ["MANA_TIMING"] = "1"
   dmtcp_flags.remove("--timing")
@@ -124,17 +131,20 @@ if "SLURM_JOB_ID" in os.environ:
   rc_filename = os.path.expanduser("~/.mana-slurm-" + os.environ["SLURM_JOB_ID"] + ".rc")
 else:
   rc_filename = os.path.expanduser("~/.mana.rc")
+# print("rc_filename", rc_filename)
 rc_file = open(rc_filename)
 for line in rc_file:
+  # print(line)
   line = line.split()
   if not line:
-    break
+    continue
   if line[0] == "Host:":
     host_flag = " -h " + line[1] + " "
   elif line[0] == "Port:":
     port_flag = " -p " + line[1] + " "
 rc_file.close()
 
+# print("host_flag", host_flag, "port_flag", port_flag)
 # Remove old ~/.mana_*.rc files from a week ago or more.
 os.system("find $HOME/.mana*.rc -ignore_readdir_race -maxdepth 0 -mtime +7 -type f -delete")
 
@@ -156,7 +166,7 @@ else:
   cmd_line = ""
 cmd_line += mana_root_path + "bin/dmtcp_launch --mpi " + host_flag + port_flag + \
             " --no-gzip --join-coordinator --disable-dl-plugin" + \
-            " --with-plugin " + mana_root_path + "lib/dmtcp/libmana.so " + \
+            " --with-plugin " + mana_root_path + "lib/dmtcp/libmana.so" + ":" + plugins + " " + \
             " ".join(dmtcp_flags) + " " + mana_root_path + "bin/lower-half " + \
             " " .join(target_app)
 if verbose:

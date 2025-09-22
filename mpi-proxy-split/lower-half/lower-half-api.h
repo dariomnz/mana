@@ -523,13 +523,51 @@ extern LowerHalfInfo_t *lh_info;
   MACRO(Wtime) \
   MACRO(MANA_Internal)
 
+#define FOREACH_LFI_FNC(MACRO) \
+  MACRO(strerror) \
+  MACRO(server_create) \
+  MACRO(server_accept) \
+  MACRO(server_close) \
+  MACRO(client_create) \
+  MACRO(client_close) \
+  MACRO(send) \
+  MACRO(tsend) \
+  MACRO(recv) \
+  MACRO(trecv) \
+  MACRO(request_create) \
+  MACRO(request_free) \
+  MACRO(request_completed) \
+  MACRO(request_size) \
+  MACRO(request_source) \
+  MACRO(request_error) \
+  MACRO(send_async) \
+  MACRO(tsend_async) \
+  MACRO(recv_async) \
+  MACRO(trecv_async) \
+  MACRO(wait) \
+  MACRO(wait_any) \
+  MACRO(wait_all) \
+  MACRO(cancel) \
+  MACRO(group_create) \
+  MACRO(group_rank) \
+  MACRO(group_size) \
+  MACRO(group_close) \
+  MACRO(barrier) \
+  MACRO(broadcast)
+
+
 #define GENERATE_ENUM(ENUM) MPI_Fnc_##ENUM,
 #define GENERATE_FNC_PTR(FNC) (void*)&MPI_##FNC,
 #define GENERATE_FNC_STRING(FNC)  "MPI_" #FNC
 
+#define GENERATE_LFI_ENUM(ENUM) lfi_Fnc_##ENUM,
+#define GENERATE_LFI_FNC_PTR(FNC) (void*)&lfi_##FNC,
+#define GENERATE_LFI_FNC_STRING(FNC)  "lfi_" #FNC
+
 enum MPI_Fncs {
   MPI_Fnc_NULL,
   FOREACH_FNC(GENERATE_ENUM)
+  FOREACH_LFI_FNC(GENERATE_LFI_ENUM)
   MPI_Fnc_Invalid,
 };
 #ifdef USES_MPI_Fnc_strings

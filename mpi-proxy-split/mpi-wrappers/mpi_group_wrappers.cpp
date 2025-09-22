@@ -123,6 +123,86 @@ int PMPI_Group_incl(MPI_Group group, int n, const int* ranks, MPI_Group * newgro
   return retval;
 }
 
+#pragma weak MPI_Group_range_incl = PMPI_Group_range_incl
+int PMPI_Group_range_incl(MPI_Group group, int n, int ranges[][3], MPI_Group *newgroup) {
+  int result = MPI_SUCCESS; // Initialize result to success
+  int group_size;
+  int *ranks_to_include = NULL;
+  int current_count = 0;
+
+  // Get the size of the original group
+  result = MPI_Group_size(group, &group_size);
+  if (result != MPI_SUCCESS) {
+    return result; // Return error if group size fails
+  }
+
+  // First, calculate the total number of ranks to include
+  // This is necessary to allocate memory for ranks_to_include
+  for (int i = 0; i < n; ++i) {
+    int start = ranges[i][0];
+    int end = ranges[i][1];
+    int stride = ranges[i][2];
+
+    // Ensure stride is not zero to prevent infinite loops
+    if (stride == 0) {
+      fprintf(stderr, "Error: Stride cannot be zero in MPI_Group_range_incl.\n");
+      return MPI_ERR_ARG; // Or a more specific MPI error if available
+    }
+
+    // Iterate through the range to count ranks
+    if (stride > 0) {
+      for (int r = start; r <= end; r += stride) {
+        if (r >= 0 && r < group_size) { // Ensure rank is within original group bounds
+          current_count++;
+        }
+      }
+    } else { // stride < 0
+      for (int r = start; r >= end; r += stride) {
+        if (r >= 0 && r < group_size) { // Ensure rank is within original group bounds
+          current_count++;
+        }
+      }
+    }
+  }
+
+  // Allocate memory for the ranks to include
+  ranks_to_include = (int *)malloc(current_count * sizeof(int));
+  if (ranks_to_include == NULL) {
+    fprintf(stderr, "Error: Failed to allocate memory for ranks_to_include.\n");
+    return MPI_ERR_NO_MEM; // Return out of memory error
+  }
+
+  // Now, populate the ranks_to_include array
+  current_count = 0; // Reset counter for populating the array
+  for (int i = 0; i < n; ++i) {
+    int start = ranges[i][0];
+    int end = ranges[i][1];
+    int stride = ranges[i][2];
+
+    if (stride > 0) {
+      for (int r = start; r <= end; r += stride) {
+        if (r >= 0 && r < group_size) {
+          ranks_to_include[current_count++] = r;
+        }
+      }
+    } else { // stride < 0
+      for (int r = start; r >= end; r += stride) {
+        if (r >= 0 && r < group_size) {
+          ranks_to_include[current_count++] = r;
+        }
+      }
+    }
+  }
+
+  // Call MPI_Group_incl with the collected ranks
+  result = MPI_Group_incl(group, current_count, ranks_to_include, newgroup);
+
+  // Free the allocated memory
+  free(ranks_to_include);
+
+  return result;
+}
+
 #pragma weak MPI_Group_translate_ranks = PMPI_Group_translate_ranks
 int PMPI_Group_translate_ranks(MPI_Group group1, int n, const int ranks1[],
                           MPI_Group group2, int ranks2[])
