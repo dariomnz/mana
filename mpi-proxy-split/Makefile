@@ -100,7 +100,7 @@ ${MANA_ROOT}/lib/dmtcp/libmpistub.so:
 	+ make -C ${WRAPPERS_SRCDIR} install
 ${MANA_ROOT}/bin/mana_p2p_update_logs: ${WRAPPERS_SRCDIR}/mana_p2p_update_logs.c
 	+ make -C ${WRAPPERS_SRCDIR} install
-${MANA_ROOT}/bin/lower-half:
+${MANA_ROOT}/bin/lower-half: ${LH_SRCDIR}/get-symbol-offset.c
 	+ make -C ${LH_SRCDIR} install
 
 # ${WRAPPERS_SRCDIR}/libmpiwrappers.a ia a prerequisite for libmana.so,

@@ -14,15 +14,15 @@ static int readElfSection(int , int , const Elf64_Ehdr* ,
                           Elf64_Shdr* , char **);
 static int expandDebugFile(char *debugLibName,
                            const char *dir, const char *debugName);
-
-off_t get_symbol_offset(const char *pathname, const char *symbol) {
+off_t get_symbol_offset(const char *pathname, const char *symbol);
+off_t get_symbol_offset_gnu_debuglink(const char *pathname, const char *symbol) {
   unsigned char e_ident[EI_NIDENT];
   int rc;
   int symtab_found = 0;
-  int foundDebugLib = 0;
   char debugLibName[PATH_MAX] = {0};
   char *shsectData = NULL;
 
+  fprintf(stderr, "pathname %s symbol %s\n", pathname, symbol);
   // FIXME:  Rohan's version wraps the rest of this function
   //         in 'while (retries < 2) { ... }' and then uses two
   //         or three tries to find the correct SHT_STRTAB (namely, ".strtab").
@@ -58,21 +58,9 @@ off_t get_symbol_offset(const char *pathname, const char *symbol) {
   for (i = 0; i < elf_hdr.e_shnum; i++) {
     rc = read(fd, &sect_hdr, sizeof sect_hdr);
     assert(rc == sizeof(sect_hdr));
-    if (sect_hdr.sh_type == SHT_SYMTAB) {
-      symtab = sect_hdr;
-      symtab_found = 1;
-    } else if (sect_hdr.sh_type == SHT_STRTAB &&
-               !strcmp(&shsectData[sect_hdr.sh_name], ".strtab")) {
-      // Note that there are generally three STRTAB sections in ELF binaries:
-      // .dynstr, .shstrtab, and .strtab; We only care about the strtab section.
-      int fd2 = open(pathname, O_RDONLY);
-      lseek(fd2, sect_hdr.sh_offset, SEEK_SET);
-      assert(sect_hdr.sh_size < sizeof(strtab));
-      rc = read(fd2, strtab, sect_hdr.sh_size);
-      assert(rc == sect_hdr.sh_size);
-      close(fd2);
-    } else if (sect_hdr.sh_type == SHT_PROGBITS &&
-               !strcmp(&shsectData[sect_hdr.sh_name], ".gnu_debuglink")) {
+    fprintf(stderr, "sect_hdr.sh_type %d &shsectData[sect_hdr.sh_name] %s\n", sect_hdr.sh_type, &shsectData[sect_hdr.sh_name]);
+    if (sect_hdr.sh_type == SHT_PROGBITS &&
+              !strcmp(&shsectData[sect_hdr.sh_name], ".gnu_debuglink")) {
       // If it's the ".gnu_debuglink" section, we read it to figure out
       // the path to the debug symbol file
       Elf64_Shdr tmp;
@@ -95,14 +83,11 @@ off_t get_symbol_offset(const char *pathname, const char *symbol) {
       //       /usr/lib/debug/lib64/libc-2.28.so-2.28-236.el8_9.7.x86-64.debug 
       //       Package glibc-debuginfo-*.rpm exists: provides libc-*.debug
       if (access("/lib/debug/.build-id", F_OK) == 0) { // If Debian/Ubuntu
-        // TODO: need change to make it work in C3
-        #if 0
         // Debian variants use separate debug symbol file: /lib/debug/.build-id
         // The file below is the older hierarchy.  Now it uses .build-id.
         snprintf(debugLibName, sizeof debugLibName, "%s/%s",
-                 "/usr/lib/debug/lib/x86_64-linux-gnu", debugName);
-        // fprintf(stderr, "pathname %s debugLibName %s debugName %s \n", pathname, debugLibName, debugName);
-        // fprintf(stderr, "debugLibName %s debugName %s shsectData[sect_hdr.sh_name] %.15s\n", debugLibName, debugName, &shsectData[sect_hdr.sh_name]);
+          "/usr/lib/debug/lib/x86_64-linux-gnu", debugName);
+        fprintf(stderr, "debugLibName %s\n",debugLibName);
         if (! expandDebugFile(debugLibName,
                               "/lib/debug/.build-id", debugName)) {
           fprintf(stderr,
@@ -115,14 +100,86 @@ off_t get_symbol_offset(const char *pathname, const char *symbol) {
         close(fd);
         fd = open(debugLibName, O_RDONLY);
         assert(fd != -1);
+        close(fd);
         return get_symbol_offset(debugLibName, symbol);
-        #endif  
       }
       free(debugName);
-      foundDebugLib = 1;
     }
   }
-  if (! symtab_found) {
+  close(fd);
+  fprintf(stderr, "*** FAILED TO FIND symbol: %s\n", symbol);
+  exit(1);
+}
+
+off_t get_symbol_offset(const char *pathname, const char *symbol) {
+  unsigned char e_ident[EI_NIDENT];
+  int rc;
+  int symtab_found = 0;
+  int have_gnu_debuglink = 0;
+  char debugLibName[PATH_MAX] = {0};
+  char *shsectData = NULL;
+
+  fprintf(stderr, "pathname %s symbol %s\n", pathname, symbol);
+  // FIXME:  Rohan's version wraps the rest of this function
+  //         in 'while (retries < 2) { ... }' and then uses two
+  //         or three tries to find the correct SHT_STRTAB (namely, ".strtab").
+
+  int fd = open(pathname, O_RDONLY);
+  if (fd == -1) {
+    return 0; // 0 means pathname not found
+  }
+
+  rc = read(fd, e_ident, sizeof(e_ident));
+  assert(rc == sizeof(e_ident));
+  assert(strncmp((char *)e_ident, ELFMAG, sizeof(ELFMAG)-1) == 0);
+  // FIXME:  Add support for 32-bit ELF later
+  assert(e_ident[EI_CLASS] == ELFCLASS64);
+
+  // Reset fd to beginning and parse file header
+  lseek(fd, 0, SEEK_SET);
+  Elf64_Ehdr elf_hdr;
+  rc = read(fd, &elf_hdr, sizeof(elf_hdr));
+  assert(rc == sizeof(elf_hdr));
+
+  // Get start of symbol table and string table
+  Elf64_Off shoff = elf_hdr.e_shoff;
+  Elf64_Shdr sect_hdr;
+  Elf64_Shdr symtab;
+  Elf64_Sym symtab_entry;
+  char strtab[200000];
+  int i;
+  // First, read the data from the shstrtab section
+  // This section contains the strings corresponding to the section names
+  rc = readElfSection(fd, elf_hdr.e_shstrndx, &elf_hdr, &sect_hdr, &shsectData);
+  lseek(fd, shoff, SEEK_SET);
+  for (i = 0; i < elf_hdr.e_shnum; i++) {
+    rc = read(fd, &sect_hdr, sizeof sect_hdr);
+    assert(rc == sizeof(sect_hdr));
+    fprintf(stderr, "sect_hdr.sh_type %d &shsectData[sect_hdr.sh_name] %s\n", sect_hdr.sh_type, &shsectData[sect_hdr.sh_name]);
+    if (sect_hdr.sh_type == SHT_SYMTAB) {
+      symtab = sect_hdr;
+      symtab_found = 1;
+    } else if (sect_hdr.sh_type == SHT_STRTAB &&
+               !strcmp(&shsectData[sect_hdr.sh_name], ".strtab")) {
+      // Note that there are generally three STRTAB sections in ELF binaries:
+      // .dynstr, .shstrtab, and .strtab; We only care about the strtab section.
+      int fd2 = open(pathname, O_RDONLY);
+      lseek(fd2, sect_hdr.sh_offset, SEEK_SET);
+      assert(sect_hdr.sh_size < sizeof(strtab));
+      rc = read(fd2, strtab, sect_hdr.sh_size);
+      assert(rc == sect_hdr.sh_size);
+      close(fd2);
+    } else if (sect_hdr.sh_type == SHT_PROGBITS &&
+                !strcmp(&shsectData[sect_hdr.sh_name], ".gnu_debuglink")) {
+      have_gnu_debuglink = 1;
+    }
+  }
+  
+  fprintf(stderr, "symtab_found %d\n",symtab_found);
+  if (!symtab_found && have_gnu_debuglink){
+    return get_symbol_offset_gnu_debuglink(pathname, symbol);
+  }
+  if (!symtab_found) {
     close(fd);
     return 0; // No symbol table found.
   }
@@ -187,7 +244,6 @@ static int expandDebugFile(char *debugLibName,
       }
       // list_files_recursively(entry->d_name);
     } else {
-      // fprintf(stderr, "strcmp '%s' '%s'\n", entry->d_name, debugName);
       if (strcmp(entry->d_name, debugName) == 0) {
         snprintf(debugLibName, PATH_MAX, "%s/%s", dir, entry->d_name);
         return 1; // found a match
