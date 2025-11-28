@@ -60,7 +60,7 @@ main(int argc, char **argv)
       fflush(stdout);
       fflush(stdout);
     }
-    sleep(5);
+    sleep(1);
   }
   MPI_Finalize();
 }
