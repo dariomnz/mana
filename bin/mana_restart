@@ -31,14 +31,14 @@ if "--timing" in dmtcp_flags:
   dmtcp_flags.remove("--timing")
 if "--restartdir" in dmtcp_flags:
   ckptdir_path = dmtcp_flags[dmtcp_flags.index("--restartdir") + 1]
-  if not os.path.exists(ckptdir_path):
-    print("mana_restart: --restartdir " + ckptdir_path + ": Restart directory doesn't exist")
-    sys.exit(1)
+  # if not os.path.exists(ckptdir_path):
+  #   print("mana_restart: --restartdir " + ckptdir_path + ": Restart directory doesn't exist")
+  #   sys.exit(1)
 if "--ckptdir" in dmtcp_flags:
   ckptdir_path = dmtcp_flags[dmtcp_flags.index("--ckptdir") + 1]
-  if not os.path.exists(ckptdir_path):
-    print("mana_restart: --ckptdir " + ckptdir_path + ": Checkpoint directory doesn't exist")
-    sys.exit(1)
+  # if not os.path.exists(ckptdir_path):
+  #   print("mana_restart: --ckptdir " + ckptdir_path + ": Checkpoint directory doesn't exist")
+  #   sys.exit(1)
 if "--quiet" in dmtcp_flags or "-q" in dmtcp_flags:
   os.environ["MANA_QUIET"] = "1"
   if "--quiet" in dmtcp_flags:

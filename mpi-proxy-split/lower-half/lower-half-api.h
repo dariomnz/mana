@@ -553,7 +553,8 @@ extern LowerHalfInfo_t *lh_info;
   MACRO(group_size) \
   MACRO(group_close) \
   MACRO(barrier) \
-  MACRO(broadcast)
+  MACRO(broadcast) \
+  MACRO(allreduce)
 
 
 #define GENERATE_ENUM(ENUM) MPI_Fnc_##ENUM,

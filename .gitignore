@@ -51,6 +51,7 @@ test/testconfig.py
 
 *.deps*
 
+*.mana
 ckpt_*.dmtcp
 dmtcp_restart_script*
 
@@ -62,6 +63,7 @@ GTAGS
 build/
 
 mpi-proxy-split/mpi-wrappers/p2p-deterministic.h
+mpi-proxy-split/lower-half/lower-half
 mpi-proxy-split/mpi-wrappers/mana_p2p_update_logs
 restart_plugin/lower_half_api.h
 manpages/mana.1.gz

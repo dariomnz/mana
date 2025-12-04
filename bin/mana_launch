@@ -75,9 +75,9 @@ if "srun" in target_app or "sbatch" in target_app:
   sys.exit(1)
 if "--ckptdir" in dmtcp_flags:
   ckptdir_path = dmtcp_flags[dmtcp_flags.index("--ckptdir") + 1]
-  if not os.path.exists(ckptdir_path):
-    print("mana_launch: --ckptdir " + ckptdir_path + ": Checkpoint directory doesn't exist")
-    sys.exit(1)
+  # if not os.path.exists(ckptdir_path):
+  #   print("mana_launch: --ckptdir " + ckptdir_path + ": Checkpoint directory doesn't exist")
+  #   sys.exit(1)
 if "--quiet" in dmtcp_flags or "-q" in dmtcp_flags:
   os.environ["MANA_QUIET"] = "1"
   if "--quiet" in dmtcp_flags:
@@ -86,12 +86,12 @@ if "--quiet" in dmtcp_flags or "-q" in dmtcp_flags:
     dmtcp_flags.remove("-q")
 
 # Check if an old checkpoint file exists in the ckptdir
-for entry in os.scandir(ckptdir_path):
-  if entry.is_dir() and entry.name.find("ckpt_rank_") != -1:
-    print("Old checkpoint files detected in the given checkpoint directory.")
-    print("  " + os.path.abspath(ckptdir_path) + "/ckpt_rank_*")
-    print("Please move or delete the old checkpoint files before a new run.")
-    sys.exit(1)
+# for entry in os.scandir(ckptdir_path):
+#   if entry.is_dir() and entry.name.find("ckpt_rank_") != -1:
+#     print("Old checkpoint files detected in the given checkpoint directory.")
+#     print("  " + os.path.abspath(ckptdir_path) + "/ckpt_rank_*")
+#     print("Please move or delete the old checkpoint files before a new run.")
+#     sys.exit(1)
 
 # Shadow library creation
 #   This check is important because in lower-half, we will check 
@@ -162,6 +162,7 @@ if not verbose:
   dmtcp_flags.insert(0, "-q -q")
 if gdb:
   cmd_line = shutil.which("gdb") + " --args "
+  # cmd_line = shutil.which("gdb") + " -x source_util.gdb --args "
 else:
   cmd_line = ""
 cmd_line += mana_root_path + "bin/dmtcp_launch --mpi " + host_flag + port_flag + \

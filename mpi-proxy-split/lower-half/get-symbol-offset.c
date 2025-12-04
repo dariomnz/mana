@@ -22,7 +22,6 @@ off_t get_symbol_offset_gnu_debuglink(const char *pathname, const char *symbol) 
   char debugLibName[PATH_MAX] = {0};
   char *shsectData = NULL;
 
-  fprintf(stderr, "pathname %s symbol %s\n", pathname, symbol);
   // FIXME:  Rohan's version wraps the rest of this function
   //         in 'while (retries < 2) { ... }' and then uses two
   //         or three tries to find the correct SHT_STRTAB (namely, ".strtab").
@@ -58,7 +57,6 @@ off_t get_symbol_offset_gnu_debuglink(const char *pathname, const char *symbol) 
   for (i = 0; i < elf_hdr.e_shnum; i++) {
     rc = read(fd, &sect_hdr, sizeof sect_hdr);
     assert(rc == sizeof(sect_hdr));
-    fprintf(stderr, "sect_hdr.sh_type %d &shsectData[sect_hdr.sh_name] %s\n", sect_hdr.sh_type, &shsectData[sect_hdr.sh_name]);
     if (sect_hdr.sh_type == SHT_PROGBITS &&
               !strcmp(&shsectData[sect_hdr.sh_name], ".gnu_debuglink")) {
       // If it's the ".gnu_debuglink" section, we read it to figure out
@@ -87,7 +85,6 @@ off_t get_symbol_offset_gnu_debuglink(const char *pathname, const char *symbol) 
         // The file below is the older hierarchy.  Now it uses .build-id.
         snprintf(debugLibName, sizeof debugLibName, "%s/%s",
           "/usr/lib/debug/lib/x86_64-linux-gnu", debugName);
-        fprintf(stderr, "debugLibName %s\n",debugLibName);
         if (! expandDebugFile(debugLibName,
                               "/lib/debug/.build-id", debugName)) {
           fprintf(stderr,
@@ -119,7 +116,6 @@ off_t get_symbol_offset(const char *pathname, const char *symbol) {
   char debugLibName[PATH_MAX] = {0};
   char *shsectData = NULL;
 
-  fprintf(stderr, "pathname %s symbol %s\n", pathname, symbol);
   // FIXME:  Rohan's version wraps the rest of this function
   //         in 'while (retries < 2) { ... }' and then uses two
   //         or three tries to find the correct SHT_STRTAB (namely, ".strtab").
@@ -155,7 +151,6 @@ off_t get_symbol_offset(const char *pathname, const char *symbol) {
   for (i = 0; i < elf_hdr.e_shnum; i++) {
     rc = read(fd, &sect_hdr, sizeof sect_hdr);
     assert(rc == sizeof(sect_hdr));
-    fprintf(stderr, "sect_hdr.sh_type %d &shsectData[sect_hdr.sh_name] %s\n", sect_hdr.sh_type, &shsectData[sect_hdr.sh_name]);
     if (sect_hdr.sh_type == SHT_SYMTAB) {
       symtab = sect_hdr;
       symtab_found = 1;
@@ -175,7 +170,6 @@ off_t get_symbol_offset(const char *pathname, const char *symbol) {
     }
   }
   
-  fprintf(stderr, "symtab_found %d\n",symtab_found);
   if (!symtab_found && have_gnu_debuglink){
     return get_symbol_offset_gnu_debuglink(pathname, symbol);
   }
